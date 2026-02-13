@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Insider Leak Puzzle</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #03001c;
+      color: #eee;
+      margin: 0;
+      padding: 0;
+    }
+    .page {
+      display: none;
+      padding: 40px;
+    }
+    .active {
+      display: block;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 18px;
+      border-radius: 8px;
+      border: none;
+      background: #6200ea;
+      color: white;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    button:hover {
+      background: #3700b3;
+    }
+    .chart-container {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    canvas {
+      background: #180025;
+      border: 2px solid #444;
+    }
+    input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      margin-top: 15px;
+      width: 220px;
+    }
+    #result {
+      margin-top: 15px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .hint { 
+      font-style: italic; 
+      color: #999; 
+      margin-top: 8px; 
+    }
+
+    /* ADDITION: Popup styling */
+    #popup {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    #popupContent {
+      background: #1e0036;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 0 20px #6200ea;
+      color: #fff;
+      text-align: center;
+      animation: pop 0.6s ease;
+    }
+    #popupContent h2 {
+      margin-bottom: 10px;
+      font-size: 28px;
+      color: #00ff99;
+    }
+    #popupContent p {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    @keyframes pop {
+      from { transform: scale(0.5); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    /* ADDITION: Rules Card */
+    .rules-card {
+      background: rgba(30, 0, 54, 0.8);
+      border: 2px solid #6200ea;
+      border-radius: 16px;
+      padding: 20px;
+      max-width: 600px;
+      margin: 20px auto;
+      box-shadow: 0 0 20px rgba(98,0,234,0.6);
+      text-align: left;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .rules-card h3 {
+      text-align: center;
+      color: #00ffcc;
+      margin-bottom: 12px;
+    }
+    .rules-card ul {
+      list-style: none;
+      padding: 0;
+    }
+    .rules-card ul li {
+      margin: 8px 0;
+      padding-left: 20px;
+      position: relative;
+    }
+    .rules-card ul li::before {
+      content: "✔";
+      color: #00ff99;
+      position: absolute;
+      left: 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- START PAGE -->
+  <div id="startPage" class="page active">
+    <h1>Insider Leak Puzzle</h1>
+    <p>Welcome to the challenge. Can you uncover the hidden leak?</p>
+    <button onclick="goToInstructions()">Start</button>
+  </div>
+
+  <!-- INSTRUCTIONS PAGE -->
+  <div id="instructionsPage" class="page">
+    <h2>How to Play</h2>
+    <p>You are about to enter a mysterious market puzzle. A chart will appear.</p>
+    <p>Enter the secret word when you think you’ve uncovered the leak.</p>
+    <p>The game ends when you submit the correct secret word.</p>
+
+    <!-- Stylish Rules Card -->
+    <div class="rules-card">
+      <h3>📜 Rules & Regulations</h3>
+      <ul>
+        <li>Play fairly and without external help.</li>
+        <li>You may try multiple guesses until you succeed.</li>
+        <li>Do not refresh or close the page during the game.</li>
+        <li>Respect the challenge — no shortcuts allowed.</li>
+        <li>The puzzle ends only when the correct answer is submitted.</li>
+      </ul>
+    </div>
+
+    <button onclick="startGame()">Play</button>
+  </div>
+
+  <!-- GAME PAGE -->
+  <div id="gamePage" class="page">
+    <h1>Insider Leak Puzzle</h1>
+    <p><b>Riddle:</b> “A mysterious insider has leaked information. The market candles look normal, 
+    but rumor says <span style="color:lightgreen;">green brings power</span>, 
+    <span style="color:red;">red brings silence</span>. 
+    Only those who can read the hidden language will find the ticker.”</p>
+
+    <p class="hint"><b>Hint</b>: Two choices, many digits... the market speaks in the language of machines.</p>
+    
+    <div class="chart-container">
+      <canvas id="chart"></canvas>
+    </div>
+
+    <input id="guess" placeholder="Enter secret word">
+    <br>
+    <button onclick="checkAnswer()">Submit</button>
+    <p id="result"></p>
+  </div>
+
+  <!-- ADDITION: Popup Window -->
+  <div id="popup">
+    <div id="popupContent">
+      <h2>🎉 Congratulations!</h2>
+      <p>You uncovered the secret leak successfully.</p>
+      <button onclick="closePopup()">Close</button>
+    </div>
+  </div>
+
+  <script>
+    // Pages
+    const startPage = document.getElementById("startPage");
+    const instructionsPage = document.getElementById("instructionsPage");
+    const gamePage = document.getElementById("gamePage");
+    const popup = document.getElementById("popup");
+
+    function goToInstructions() {
+      startPage.classList.remove("active");
+      instructionsPage.classList.add("active");
+    }
+
+    function startGame() {
+      instructionsPage.classList.remove("active");
+      gamePage.classList.add("active");
+      drawChart();
+    }
+
+    // 🔑 Secret Word
+    const secretWord = "hello";  // change here
+
+    function wordToBinary(word) {
+      return word.split("")
+        .map(c => c.charCodeAt(0).toString(2).padStart(8, "0"))
+        .join("");
+    }
+    const binarySeq = wordToBinary(secretWord);
+
+    function drawChart() {
+      const canvas = document.getElementById("chart");
+      const ctx = canvas.getContext("2d");
+
+      const candleWidth = 18;   
+      const spacing = 10;       
+      const startX = 50;        
+      const baseY = 200;        
+      const candleHeight = 40;  
+      const wickExtra = 10;     
+
+      const neededWidth = (candleWidth + spacing) * binarySeq.length + startX * 2;
+      canvas.width = neededWidth < 500 ? 500 : neededWidth;  
+      canvas.height = 400;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      let x = startX;
+
+      for (let bit of binarySeq) {
+        const isUp = (bit === "1"); 
+        let open = baseY + (Math.random() * 40 - 20); 
+        let close = isUp ? open - candleHeight : open + candleHeight;
+        let high = Math.min(open, close) - wickExtra;
+        let low = Math.max(open, close) + wickExtra;
+        
+        ctx.beginPath();
+        ctx.moveTo(x + candleWidth/2, high);
+        ctx.lineTo(x + candleWidth/2, low);
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = isUp ? "#00c853" : "#d50000"; 
+        ctx.fillRect(x, Math.min(open, close), candleWidth, Math.abs(close - open));
+
+        ctx.strokeStyle = "#111";
+        ctx.strokeRect(x, Math.min(open, close), candleWidth, Math.abs(close - open));
+
+        x += candleWidth + spacing;
+      }
+    }
+
+    function checkAnswer() {
+      const guess = document.getElementById("guess").value.trim().toUpperCase();
+      if (guess === secretWord.toUpperCase()) {
+        document.getElementById("result").innerText = "✅ Correct! You uncovered the leak.";
+        showPopup();
+      } else {
+        document.getElementById("result").innerText = "❌ Wrong! The market hides deeper secrets.";
+      }
+    }
+
+    // ADDITION: Popup control
+    function showPopup() {
+      popup.style.display = "flex";
+    }
+    function closePopup() {
+      popup.style.display = "none";
+    }
+  </script>
+</body>
+</html>

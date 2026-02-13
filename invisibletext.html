@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Invisible Text Puzzle</title>
+  <style>
+    :root{--bg:#071023;--card:#ffffff;--muted:#94a3b8;--accent:#60a5fa}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:linear-gradient(180deg,#031022 0%,#071025 100%);font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#e6eef8;}
+    .wrap{width:min(760px,94vw);padding:28px}
+    .card{background:var(--card);border-radius:12px;padding:22px 20px;color:#0b1220;box-shadow:0 12px 30px rgba(2,6,23,0.6);text-align:center}
+    h1{margin:0;font-size:1.5rem}
+    p.lead{color:var(--muted);margin:12px 0}
+    button{padding:10px 16px;margin-top:16px;border:none;border-radius:10px;background:var(--accent);color:#06202a;font-weight:600;cursor:pointer}
+    .hidden{display:none}
+    .riddle{margin-top:18px;padding:14px;border-radius:8px;background:linear-gradient(180deg,#fff,#fcfcfc);border:1px solid rgba(11,18,32,0.04)}
+    .hint{font-weight:600;color:#0f1724;margin-bottom:8px}
+    .lines{line-height:1.9;margin:0;color:#0b1220}
+    .answer-box{margin-top:20px;display:flex;gap:8px}
+    .answer-box input{flex:1;padding:8px;border:1px solid #94a3b8;border-radius:8px}
+    .answer-box button{padding:8px 14px;border:none;border-radius:8px;background:var(--accent);font-weight:600;color:#06202a;cursor:pointer}
+
+    /* Popup styling */
+    .popup-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .popup-box {
+      background: white;
+      padding: 20px 28px;
+      border-radius: 12px;
+      text-align: center;
+      max-width: 320px;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.3);
+      transform: scale(0.7);
+      animation: popIn 0.4s ease forwards;
+    }
+    .popup-box h2 {margin:0 0 12px;color:#0b1220;}
+    .popup-box button {margin-top:10px;padding:8px 14px;border:none;border-radius:8px;background:#60a5fa;font-weight:600;cursor:pointer}
+    @keyframes popIn {from{transform:scale(0.5);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+    /* Special congratulation popup */
+    .congrats-box {
+      background: linear-gradient(135deg,#60a5fa,#34d399);
+      color: white;
+      padding: 24px 32px;
+      border-radius: 16px;
+      text-align: center;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+      animation: bounceIn 0.6s ease forwards;
+    }
+    .congrats-box h2 {font-size:1.6rem;margin:0 0 10px;}
+    .congrats-box p {margin:0;font-size:1rem;}
+    @keyframes bounceIn {
+      0% {transform: scale(0.5); opacity: 0;}
+      60% {transform: scale(1.2); opacity: 1;}
+      100% {transform: scale(1);}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- Start Page -->
+    <div id="start-page" class="card">
+      <h1>Welcome to the Invisible Text Puzzle</h1>
+      <button id="start-btn">Start Game</button>
+    </div>
+
+    <!-- Instruction Page -->
+    <div id="instruction-page" class="card hidden">
+      <h1>How to Play</h1>
+      <p class="lead">Read the riddle carefully. Somewhere unexpected, the answer is hidden. Once you think you found it, type it in the answer box.</p>
+
+      <!-- Rules & Regulations -->
+      <div class="riddle" style="margin-top:20px;text-align:left;">
+        <h3 style="margin-top:0;">Rules & Regulations:</h3>
+        <ul style="color:#0b1220;line-height:1.7;">
+          <li>Think creatively — the answer may not be obvious.</li>
+          <li>No external help — solve it on your own.</li>
+          <li>You have unlimited attempts, but only the right answer wins.</li>
+          <li>Be observant: clues may hide in unexpected places.</li>
+        </ul>
+      </div>
+
+      <button id="play-btn">Play</button>
+    </div>
+
+    <!-- Game Page -->
+    <div id="game-page" class="card hidden">
+      <h1>Invisible Text Puzzle</h1>
+      <div class="riddle" aria-live="polite">
+        <div class="hint">Riddle: <strong>"Look between the lines… or maybe not."</strong></div>
+        <p class="lines">
+          I am hidden not where you expect, but I am still here.<br>
+          Sweep across the page… or maybe check somewhere you never look.
+        </p>
+      </div>
+      <div class="answer-box">
+        <input type="text" id="player-answer" placeholder="Type your answer here...">
+        <button id="submit-answer">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup -->
+  <div class="popup-overlay" id="popup">
+    <div class="popup-box" id="popup-box">
+      <h2 id="popup-message">Message</h2>
+      <button onclick="closePopup()">Close</button>
+    </div>
+  </div>
+
+  <!-- Confetti Canvas -->
+  <canvas id="confetti-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2000;"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <script>
+    (function(){
+      const correctAnswer = "HARSHAD MEHTA";  
+      document.title = "Invisible Text Puzzle — " + correctAnswer;
+
+      const startPage = document.getElementById('start-page');
+      const instructionPage = document.getElementById('instruction-page');
+      const gamePage = document.getElementById('game-page');
+      const startBtn = document.getElementById('start-btn');
+      const playBtn = document.getElementById('play-btn');
+      const submitBtn = document.getElementById('submit-answer');
+      const playerInput = document.getElementById('player-answer');
+
+      const popup = document.getElementById('popup');
+      const popupBox = document.getElementById('popup-box');
+      const popupMessage = document.getElementById('popup-message');
+
+      function showPopup(message, isCongrats=false) {
+        if(isCongrats){
+          popupBox.innerHTML = `
+            <div class="congrats-box">
+              <h2>🎉 Congratulations!</h2>
+              <p>${message}</p>
+              <button onclick="closePopup()" style="margin-top:14px;background:white;color:#0b1220;">Close</button>
+            </div>`;
+
+          // 🎊 Launch confetti
+          fireConfetti();
+        } else {
+          popupMessage.innerHTML = message;
+          popupBox.innerHTML = `
+            <h2 id="popup-message">${message}</h2>
+            <button onclick="closePopup()">Close</button>`;
+        }
+        popup.style.display = 'flex';
+      }
+
+      window.closePopup = function() {
+        popup.style.display = 'none';
+      }
+
+      startBtn.addEventListener('click', ()=>{
+        startPage.classList.add('hidden');
+        instructionPage.classList.remove('hidden');
+      });
+
+      playBtn.addEventListener('click', ()=>{
+        instructionPage.classList.add('hidden');
+        gamePage.classList.remove('hidden');
+      });
+
+      submitBtn.addEventListener('click', function(){
+        const ans = playerInput.value.trim().toLowerCase();
+        if(ans === correctAnswer.toLowerCase()){
+          showPopup("You solved it correctly! The hidden answer was indeed HARSHAD MEHTA.", true);
+        } else {
+          showPopup("😂 LOL! You really thought that was correct... but nope!");
+        }
+      });
+
+      playerInput.addEventListener('keydown', function(e){
+        if(e.key === 'Enter'){
+          submitBtn.click();
+        }
+      });
+
+      // 🎊 Confetti animation function
+      function fireConfetti(){
+        const duration = 3 * 1000;
+        const end = Date.now() + duration;
+
+        (function frame() {
+          confetti({
+            particleCount: 4,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0 }
+          });
+          confetti({
+            particleCount: 4,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1 }
+          });
+          if (Date.now() < end) {
+            requestAnimationFrame(frame);
+          }
+        })();
+      }
+    })();
+  </script>
+</body>
+</html>
